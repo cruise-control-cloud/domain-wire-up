@@ -20,7 +20,6 @@ Domain Wire Up is a quick script cobbled together to do the following:
 ## Directions 
 Domain Wire Up can be called from the command line: 
 - pipenv run python domaincontrol.py <domain.com> <createdBy>
-
-- domain.com: Domain you wish to purchase. Records and Cert created for www.domain.com as well.
-- createdBy: All resources tagged with createdBy tag and value. 
+-- domain.com: Domain you wish to purchase. Records and Cert created for www.domain.com as well.
+-- createdBy: All resources tagged with createdBy tag and value. 
 
