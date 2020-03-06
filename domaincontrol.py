@@ -6,7 +6,7 @@ import sys
 import json
 import time
 import logging
-
+import configparser
 
 # 2 Mind the regions. 
 r53d    = boto3.client('route53domains', region_name='us-east-1')
@@ -14,25 +14,29 @@ r53     = boto3.client('route53', region_name='us-east-1')
 acm     = boto3.client('acm', region_name='us-east-1')
 cf      = boto3.client('cloudfront', region_name='us-east-1') 
 
-cloudFrontTargetID = "ELB-my-first-load-balancer" #  your Target Load Balancer, etc here. 
-cloudFrontTargetDomainName = "my-first-loadbalancer.us-west-2.elb.amazonaws.com" # DNS Name of the load balancer target
+config = configparser.ConfigParser()
+ROOT = os.path.abspath(os.path.dirname(__file__))
+CONFIG_FILE =  os.path.join(ROOT, 'config', 'default.cfg')
+config.read(CONFIG_FILE)
+settings = config['default']
 
-
+cloudFrontTargetID = settings["cloudFrontTargetID"] #  your Target Load Balancer, etc here. 
+cloudFrontTargetDomainName = settings["cloudFrontTargetDomainName"] # DNS Name of the load balancer target
 
 # Fill this out first
 contactInfo = {
-        "FirstName": "",
-        "LastName": "",
-        "ContactType": "",
-        "OrganizationName": "",
-        "AddressLine1": "",
-        "AddressLine2": "",
-        "City": "",
-        "State": "",
-        "CountryCode": "",
-        "ZipCode": "",
-        "PhoneNumber": "",
-        "Email": ""
+        "FirstName": settings["FirstName"],
+        "LastName": settings["LastName"],
+        "ContactType": settings["ContactType"],
+        "OrganizationName": settings["OrganizationName"],
+        "AddressLine1": settings["AddressLine1"],
+        "AddressLine2": settings["AddressLine2"],
+        "City": settings["City"],
+        "State": settings["State"],
+        "CountryCode": settings["CountryCode"],
+        "ZipCode": settings["ZipCode"],
+        "PhoneNumber": settings["PhoneNumber"],
+        "Email": settings["Email"]
         }
 createdBy = 'domain-control'
 
