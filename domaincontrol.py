@@ -104,14 +104,15 @@ def domain_purchase_waiter(domain, createdBy, operationId):
     return "Success", "Domain Registered Successfully"
 
 def get_hosted_zone_id(domain):
-    hostedZoneResponse = r53.list_hosted_zones(
-        MaxItems='500',
-    )
+    zonePaginator = r53.get_paginator('list_hosted_zones')
+    zoneIterator = zonePaginator.paginate()
 
-    for zones in hostedZoneResponse['HostedZones']:
-        if zones['Name'] == domain +'.':
-            zoneId = zones['Id'].replace("/hostedzone/","")
-            return zoneId
+    for batch in zoneIterator:
+        for zones in batch['HostedZones']:
+            if zones['Name'] == domain +'.':
+                zoneId = zones['Id'].replace("/hostedzone/","")
+                return zoneId
+    return "None"
 
 # Create ACM Cert 
 def create_certificate(domain, domainwww, createdBy):
@@ -282,7 +283,7 @@ def create_cloudfront_distro(domain, domainwww, acmArn, createdBy):
         distroID = str(e).replace("An error occurred (DistributionAlreadyExists) when calling the CreateDistributionWithTags operation: The caller reference that you are using to create a distribution is associated with another distribution. Already exists: ", "")
         logger.info('[Distribution Deployment] Attempting to continue setup with distribution: ' + distroID)
         return 'Success', distroID
-    return 'Success', cloudFrontDistroresponse['Distribution']['Id']
+    return 'Success', cloudFrontDistroresponse['Distribution']['Id'], cloudFrontDistroresponse['Distribution']['DomainName'] 
 
 def cloudfront_distro_waiter(id):
     cloudFrontDistroStatusresponse = cf.get_distribution(
@@ -296,9 +297,8 @@ def cloudfront_distro_waiter(id):
         )
     return "Success", "Distribution Successfully Deployed!"
 
-def create_dns_record_aliases(domain, domainwww, cloudfrontID):
+def create_dns_record_aliases(domain, domainwww, distroDNS):
     hostedZoneId = get_hosted_zone_id(domain)
-    dnsName = cloudfrontID + '.cloudfront.net'
     wireupRecordResponse = r53.change_resource_record_sets(
         HostedZoneId=hostedZoneId,
         ChangeBatch={
@@ -311,7 +311,7 @@ def create_dns_record_aliases(domain, domainwww, cloudfrontID):
                         'Type': 'A',
                         'AliasTarget': {
                             'HostedZoneId': 'Z2FDTNDATAQYW2',
-                            'DNSName': dnsName,
+                            'DNSName': distroDNS,
                             'EvaluateTargetHealth': False
                         }
                     }
@@ -323,7 +323,7 @@ def create_dns_record_aliases(domain, domainwww, cloudfrontID):
                         'Type': 'AAAA',
                         'AliasTarget': {
                             'HostedZoneId': 'Z2FDTNDATAQYW2',
-                            'DNSName': dnsName,
+                            'DNSName': distroDNS,
                             'EvaluateTargetHealth': False
                         }
                     }
@@ -335,7 +335,7 @@ def create_dns_record_aliases(domain, domainwww, cloudfrontID):
                         'Type': 'A',
                         'AliasTarget': {
                             'HostedZoneId': 'Z2FDTNDATAQYW2',
-                            'DNSName': dnsName,
+                            'DNSName': distroDNS,
                             'EvaluateTargetHealth': False
                         }
                     }
@@ -347,7 +347,7 @@ def create_dns_record_aliases(domain, domainwww, cloudfrontID):
                         'Type': 'AAAA',
                         'AliasTarget': {
                             'HostedZoneId': 'Z2FDTNDATAQYW2',
-                            'DNSName': dnsName,
+                            'DNSName': distroDNS,
                             'EvaluateTargetHealth': False
 
                         }
@@ -390,13 +390,13 @@ else:
     sys.exit()
 
 # Create Cloudfront distribution and wait for setup.
-distroStatus, distroId = create_cloudfront_distro(domain, domainwww, acmArn, createdBy)
+distroStatus, distroId, distroDNS = create_cloudfront_distro(domain, domainwww, acmArn, createdBy)
 logger.info('[Distribution Deployment] '+ distroStatus + ' : ' + distroId)
 distroWaiter, distroWaiterMessage = cloudfront_distro_waiter(distroId)
 logger.info('[Distribution Deployment] '+ distroWaiter + ' : ' + distroWaiterMessage)
 
 # Create Route53 RecordSet Aliases
-route53status, route53Message = create_dns_record_aliases(domain, domainwww, distroId)
+route53status, route53Message = create_dns_record_aliases(domain, domainwww, distroDNS)
 logger.info('[Route53 Recordsets] '+ route53status + ' : ' + route53Message)
 
 
